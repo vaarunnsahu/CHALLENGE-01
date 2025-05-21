@@ -1,204 +1,210 @@
-🛡️ Container Monitoring Exercise
-🔍 Real-Time Resource Monitoring + Load Simulation for Dockerized Apps
-Take control of your containers with real-time monitoring, automated alerting, and live stress testing — all packed into one powerful, minimal setup. Perfect for DevOps engineers, performance testers, or curious developers eager to visualize how containers behave under pressure.
+# Container Monitoring System
 
-![image](https://github.com/user-attachments/assets/64e2acae-8434-4c1b-a742-78267f36a412)
+A comprehensive solution for monitoring Docker containers with real-time metrics visualization, alerts, and performance tracking.
 
-🎯 What You’ll Master
-📊 Monitor Docker containers (CPU, Memory) in real-time
+## Overview
 
-💥 Simulate high CPU and memory usage with stress generators
+This project demonstrates a complete container monitoring solution that provides real-time insights into container health, performance metrics, and system status. The system consists of multiple components working together to collect, process, visualize, and alert on container metrics.
 
-🌐 View data in both terminal & web dashboards
+![image](https://github.com/user-attachments/assets/28416b30-2ba5-47e5-adda-1e165d06b21c)
 
-⏱️ Automate monitoring with cron jobs
+## What This Project Demonstrates
 
-🛠️ Learn how to respond to resource spikes like a pro
+- **Real-time Container Monitoring**: Track CPU, memory usage, and application response time
+- **Visual Dashboard**: Interactive charts for performance visualization
+- **Status Tracking**: Clear visualization of container uptime/downtime periods
+- **Alert System**: Real-time alerts for performance issues and health check failures
+- **Email Notifications**: Configurable email alerts for critical issues
+- **Stress Testing**: Simulate different load scenarios to test monitoring effectiveness
 
-⚙️ Setup: From Zero to Monitoring in 5 Minutes
-1️⃣ Project Structure
-bash
-Copy
-Edit
-# Create base directory
-mkdir container-monitoring && cd container-monitoring
+## Architecture and Flow
 
-# Organize components
-mkdir app stress monitor logs
-2️⃣ Add the Essentials
-Place the following files in their respective directories:
+The system consists of the following components:
 
-File / Folder	Destination
-docker-compose.yml	Root directory
-monitor_container.sh	Root directory
-app/index.html	app/
-stress/ files	stress/
-monitor/ files	monitor/
+1. **Web Application (flask-app)**
+   - A Flask-based web application that serves as the monitored target
+   - Includes endpoints that can generate CPU, memory, and database load
+   - Provides a /health endpoint for status checking
 
-3️⃣ Permissions
-bash
-Copy
-Edit
-chmod +x monitor_container.sh
-Make sure the monitor script is executable.
+2. **Monitoring Dashboard (app-monitor)**
+   - Collects container metrics using Docker API
+   - Processes and stores metrics data
+   - Provides a real-time web dashboard for visualization
+   - Detects threshold violations and generates alerts
 
-🚀 Launch the System
-bash
-Copy
-Edit
-docker-compose up --build
-# OR
-docker-compose up -d
-Check running containers:
+3. **Alert Service**
+   - Monitors alert logs for critical issues
+   - Aggregates and filters alerts to prevent notification spam
+   - Sends email notifications using AWS SES
 
-bash
-Copy
-Edit
-docker ps
-✅ You should see:
+4. **Stress Generator**
+   - Creates configurable loads on the web application
+   - Supports different stress profiles (CPU-intensive, memory-intensive, etc.)
+   - Helps demonstrate monitoring and alert functionality
 
-monitored-app (your test application)
+5. **Database (PostgreSQL)**
+   - Stores application data and metrics
+   - Used by the web application for database-intensive operations
 
-live-monitor (the monitoring service)
+## Data Flow
 
-🌐 Access Your Dashboard
-Visit: http://localhost:8000
+1. The monitoring service collects metrics from Docker at regular intervals
+2. Metrics are processed and stored in CSV files and in-memory data structures
+3. When thresholds are exceeded, alerts are written to the alert log
+4. The dashboard visualizes current and historical metrics through charts
+5. The alert service detects new alerts and sends email notifications
+6. The stress generator creates load to demonstrate how the system responds
 
-You’ll see:
+## Key Features
 
-✅ Real-time gauges for CPU & Memory
+### Dashboard Features
 
-📈 Live-updating historical charts
+- **Container Status**: Shows if the container is running or stopped
+- **CPU Usage**: Real-time CPU percentage with visual gauge
+- **Memory Usage**: Memory consumption with percentage and absolute values
+- **Response Time**: Application response time in milliseconds
+- **Uptime Tracking**: Binary up/down visualization showing exactly when the container was unavailable
+- **Latency Chart**: Historical view of response times
+- **Resource Metrics**: Combined view of CPU and memory usage trends
+- **Alert Display**: Most recent alerts with timestamps
 
-⚠️ Alert logs when thresholds are breached
+### Alert System Features
 
-🔥 Generate Load Like a Chaos Engineer
-🟡 Moderate Load (30–40% CPU)
-bash
-Copy
-Edit
-docker-compose run --rm -e STRESS_LEVEL=medium stress-generator
-🟠 High Load (60–70% CPU)
-bash
-Copy
-Edit
-docker-compose run --rm -e STRESS_LEVEL=high stress-generator
-🔴 Maximum Load (80%+ CPU & Memory)
-Run multiple stress generators simultaneously:
+- **Threshold-Based Alerts**: Triggers on high CPU, memory, slow response, and health check failures
+- **Email Notifications**: Configurable delivery to multiple recipients
+- **Alert Aggregation**: Groups similar alerts to prevent notification spam
+- **Alert Buffering**: Configurable delay to collect related alerts before sending
+- **Rate Limiting**: Cooldown period to prevent excessive notifications
+- **Prioritization**: Critical alerts (like container down) bypass aggregation delay
 
-bash
-Copy
-Edit
-# Terminal 1
-docker-compose run --rm -e STRESS_LEVEL=extreme stress-generator
+## Setup and Usage
 
-# Terminal 2
+### Prerequisites
+
+- Docker and Docker Compose
+- AWS account with SES access (for email alerts)
+
+### Environment Setup
+
+1. Create a `.env` file based on the provided `.env-sample`:
+
+```
+# AWS SES Configuration
+AWS_ACCESS_KEY_ID=your_aws_access_key_here
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key_here
+AWS_REGION=ap-south-1
+
+# Email Configuration
+SENDER_EMAIL=monitoring@yourdomain.com
+RECIPIENT_EMAILS=admin@yourdomain.com,devops@yourdomain.com
+
+# Optional: Alert Configuration (uncomment to override defaults)
+# CHECK_INTERVAL=30        # How often to check for new alerts (seconds)
+# ALERT_COOLDOWN=300      # Minimum time between similar alerts (seconds)
+# BUFFER_TIMEOUT=60       # Time to buffer alerts before sending (seconds)
+```
+
+### Starting the System
+
+1. Clone the repository and navigate to the project directory
+2. Start the entire stack:
+   ```bash
+   docker-compose up --build
+   ```
+   
+   Alternatively, run in detached mode:
+   ```bash
+   docker-compose up -d
+   ```
+
+### Accessing the Services
+
+- **Main Application**: http://localhost:8080
+- **Monitoring Dashboard**: http://localhost:8001
+
+### Testing Different Load Scenarios
+
+You can generate different types of stress on the system to see how the monitoring responds:
+
+```bash
+# CPU-intensive stress
 docker-compose run --rm -e STRESS_LEVEL=cpu-intensive stress-generator
-📡 Monitoring Options
-1. 🖥️ Web Dashboard (Recommended)
-Live charts, gauges, and alert logs auto-refresh every 2 seconds.
 
-2. 🧪 Terminal View
-bash
-Copy
-Edit
-# Real-time logs
-docker logs -f live-monitor
+# Memory-intensive stress
+docker-compose run --rm -e STRESS_LEVEL=memory-intensive stress-generator
 
-# Or use the native monitor script
-./monitor_container.sh live
-3. 📄 Log Files
-bash
-Copy
-Edit
-# Monitor logs
-tail -f logs/container_monitor.log
+# Extreme stress (high load on everything)
+docker-compose run --rm -e STRESS_LEVEL=extreme stress-generator
+```
 
-# Alert logs
-tail -f logs/container_alerts.log
-4. 📊 Generate Performance Report
-bash
-Copy
-Edit
-./monitor_container.sh report
-Saves a snapshot of system performance metrics.
+## Alert Configuration
 
-🧠 Understand the Output
-Dashboard Gauge Colors
-🟢 Low: 0–60%
+The alert service can be configured through environment variables:
 
-🟡 Moderate: 60–80%
+- `CHECK_INTERVAL`: How often to check for new alerts (seconds)
+- `ALERT_COOLDOWN`: Minimum time between similar alerts (seconds)
+- `BUFFER_TIMEOUT`: Time to buffer alerts before sending (seconds)
 
-🔴 High: 80–100%
+Threshold values can be configured in the docker-compose.yaml file:
 
-Terminal Symbols
-🟢 Container Active
+```yaml
+monitor:
+  environment:
+    - CPU_THRESHOLD="40"        # Alert when CPU exceeds this percentage
+    - MEMORY_THRESHOLD="50"     # Alert when memory exceeds this percentage
+    - RESPONSE_TIME_THRESHOLD=1000  # Alert when response time exceeds this (ms)
+```
 
-🔴 Alert Triggered
+## Production Considerations
 
-📉 Usage displayed with dynamic bars
+For production deployment, consider the following:
 
-🛠️ Common Operations
-bash
-Copy
-Edit
-# View app resource usage
-docker stats monitored-app
+- **Email Sandbox**: AWS SES starts in sandbox mode - verify recipient emails or request production access
+- **Secrets Management**: Use Docker secrets or AWS Secrets Manager for credentials
+- **Email Templates**: Consider using SES templates for better formatted emails
+- **Monitoring**: Add health checks for the alert service itself
+- **Persistence**: Mount volumes for logs and metrics to persist between restarts
+- **Security**: Run containers with minimal permissions
+- **Scaling**: Deploy multiple monitoring instances for high availability
 
-# Stop running stress test
-docker ps | grep stress
-docker stop <container-id>
+## Troubleshooting
 
-# Stop all services
-docker-compose down
-⏰ Bonus: Automated Monitoring with Cron
-Run the monitor every 10 minutes:
+If you encounter issues:
 
-bash
-Copy
-Edit
-(crontab -l 2>/dev/null; echo "*/10 * * * * $(pwd)/monitor_container.sh monitor >> $(pwd)/logs/cron_monitor.log 2>&1") | crontab -
-📂 View logs:
+1. Check container logs:
+   ```bash
+   docker-compose logs monitor
+   docker-compose logs alert-service
+   ```
 
-bash
-Copy
-Edit
-tail -f logs/cron_monitor.log
-🧯 Troubleshooting Guide
-Problem	Solution
-❌ Dashboard not loading	docker ps | grep live-monitor + check logs
-🔍 Container not starting	docker-compose logs monitored-app
-📉 No spike on dashboard	Use extreme or run multiple stressors
+2. Verify that the monitored container is running:
+   ```bash
+   docker ps | grep flask-app
+   ```
 
-🧾 Quick Command Cheatsheet
-bash
-Copy
-Edit
-# Start everything
-docker-compose up -d
+3. Test the application health endpoint directly:
+   ```bash
+   curl http://localhost:8080/health
+   ```
 
-# View dashboard
-open http://localhost:8000
+4. Check alert logs:
+   ```bash
+   cat logs/container_alerts.log
+   ```
+![image](https://github.com/user-attachments/assets/b9297087-5576-44ed-9318-b8264e6db5de)
+![image](https://github.com/user-attachments/assets/20889259-83b2-43d8-bbe0-582c2fba8c27)
 
-# Apply stress
-docker-compose run --rm -e STRESS_LEVEL=high stress-generator
 
-# Monitor in terminal
-docker logs -f live-monitor
 
-# Create report
-./monitor_container.sh report
+## Customization
 
-# Stop everything
-docker-compose down
-🏁 Final Thoughts
-You now have a lightweight but powerful container monitoring system at your fingertips. Use it to:
+The system can be customized by:
 
-✅ Test before scaling
+1. Modifying alert thresholds in docker-compose.yaml
+2. Adjusting the dashboard UI in dashboard.py
+3. Adding new metrics collection in monitor_container.sh
+4. Creating custom stress patterns in stress_app.py
 
-🔍 Investigate resource issues
+## License
 
-💥 Simulate real-world scenarios
-
-⚙️ Automate monitoring in CI/CD pipelines
-
+[MIT License](LICENSE)
