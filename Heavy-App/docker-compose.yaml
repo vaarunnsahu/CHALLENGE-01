@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: monitor-postgres
+    environment:
+      POSTGRES_DB: monitordb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - monitor-network
+
+  web-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.flask
+    container_name: monitored-app
+    ports:
+      - "8080:80"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=monitordb
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres123
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.5'      
+          memory: 256M      
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - monitor-network
+
+  stress-generator:
+    build: 
+      context: .
+      dockerfile: Dockerfile.load
+    depends_on:
+      - web-app
+    environment:
+      - TARGET_URL=http://web-app
+      - STRESS_LEVEL=low
+    networks:
+      - monitor-network
+
+  monitor:
+    build: ../monitor
+    container_name: flask-live-monitor
+    ports:
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./logs:/var/log
+    environment:
+      - CONTAINER_NAME=monitored-app
+      - MONITOR_MODE=live
+      - CPU_THRESHOLD="40"
+      - MEMORY_THRESHOLD="50"
+      - RESPONSE_TIME_THRESHOLD=1000
+
+    depends_on:
+      - web-app
+    command: ["sh", "-c", "python3 dashboard.py & ./monitor_container.sh live"]
+    networks:
+      - monitor-network
+
+networks:
+  monitor-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
