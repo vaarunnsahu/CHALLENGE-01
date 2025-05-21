@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  web-app:
+    image: nginx:alpine
+    container_name: monitored-app
+    ports:
+      - "8080:80"
+    volumes:
+      - ./app:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'       # 1 full CPU
+          memory: 64M      # 512 MB RAM
+        reservations:
+          cpus: '0.25'      # Minimum 25% CPU
+          memory: 64M      # Minimum 128 MB RAM
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  stress-generator:
+    build: ./stress
+    depends_on:
+      - web-app
+    environment:
+      - TARGET_URL=http://web-app
+      - STRESS_LEVEL=low
+
+  monitor:
+    build: ./monitor
+    container_name: live-monitor
+    ports:
+      - "8000:8000"     # Dashboard port
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./logs:/var/log
+    environment:
+      - CONTAINER_NAME=monitored-app
+      - MONITOR_MODE=live
+    depends_on:
+      - web-app
+    command: ["sh", "-c", "python3 dashboard.py & ./monitor_container.sh live"]
